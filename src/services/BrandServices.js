@@ -1,4 +1,5 @@
 const Brand = require("../models/BrandModel");
+const Product = require("../models/ProductModel");
 
 const createBrand = (newBrand) =>{
     return new Promise(async (resolve , reject) => {
@@ -75,24 +76,31 @@ const deleteBrand = (id) =>{
             const checkBrand = await Brand.findOne({
                 _id: id,
             })
-            // console.log('checkProduct', checkProduct);
             
             if(checkBrand === null) {
                 resolve({
-                    status: 'ERR' ,
-                    message: 'Brand không có trong database'
+                    status: 'ERR',
+                    message: 'Thương hiệu không tồn tại trong hệ thống'
                 })
+                return;
             }
+
+            // Kiểm tra xem có sản phẩm nào thuộc thương hiệu này không
+            const productsCount = await Product.countDocuments({ brand: id })
+            if(productsCount > 0) {
+                resolve({
+                    status: 'ERR',
+                    message: `Không thể xóa thương hiệu "${checkBrand.name}" vì đang có ${productsCount} sản phẩm`
+                })
+                return;
+            }
+
             await Brand.findByIdAndDelete(id)
             resolve({
-                status: 'OK' ,
-                message: 'delete Brand thành công!',
-                
+                status: 'OK',
+                message: `Đã xóa thương hiệu "${checkBrand.name}" thành công!`,
             })
-           
-            
-           
-        }catch(e) {
+        } catch(e) {
             reject(e)
         }
     })
@@ -102,13 +110,23 @@ const getAllBrand = () =>{
     return new Promise(async (resolve , reject) => {
         
         try {
-           
-            
             const allBrand = await Brand.find()
+            
+            // Thêm số lượng sản phẩm cho mỗi thương hiệu
+            const brandsWithCount = await Promise.all(
+                allBrand.map(async (brand) => {
+                    const productCount = await Product.countDocuments({ brand: brand._id })
+                    return {
+                        ...brand._doc,
+                        productCount
+                    }
+                })
+            )
+
             resolve({
-                status: 'OK' ,
-                message: 'Lấy thông tin tất cả brand thành công!',
-                data: allBrand
+                status: 'OK',
+                message: 'Lấy thông tin tất cả thương hiệu thành công!',
+                data: brandsWithCount
             })
            
             

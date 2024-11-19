@@ -3,7 +3,6 @@ const Product = require("../models/ProductModel");
 
 
 
-
 const createProduct = (newProduct) =>{
     return new Promise(async (resolve , reject) => {
         
@@ -469,10 +468,56 @@ const getAllBrandProduct = () => {
         }
     });
 };
+const searchProducts = (limit, page, searchParams) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let query = {};
 
+            // Xử lý tìm kiếm theo nhiều danh mục
+            if (searchParams?.categories && searchParams.categories !== 'all') {
+                const categoryIds = Array.isArray(searchParams.categories) 
+                    ? searchParams.categories 
+                    : searchParams.categories.toString().split(',');
+                query.category = { $in: categoryIds };
+            }
 
+            // Xử lý tìm kiếm theo nhiều thương hiệu
+            if (searchParams?.brands && searchParams.brands !== 'all') {
+                const brandIds = Array.isArray(searchParams.brands)
+                    ? searchParams.brands
+                    : searchParams.brands.toString().split(',');
+                query.brand = { $in: brandIds };
+            }
 
+            // Query database
+            const [products, totalProduct] = await Promise.all([
+                Product.find(query)
+                    .populate('category')
+                    .populate('brand')
+                    .sort({ createdAt: -1 })
+                    .limit(limit)
+                    .skip(page * limit),
+                Product.countDocuments(query)
+            ]);
 
+            resolve({
+                status: 'OK',
+                message: 'SUCCESS',
+                data: products,
+                total: totalProduct,
+                pageCurrent: Number(page + 1),
+                totalPage: Math.ceil(totalProduct / limit)
+            });
+
+        } catch (error) {
+            console.error('Search error:', error);
+            reject({
+                status: 'ERR',
+                message: error.message
+            });
+        }
+    });
+}
 
 
 module.exports = {
@@ -488,6 +533,6 @@ module.exports = {
     getAllCategoryProduct,
     getProductsByBrand,
     getAllBrandProduct,
-
+    searchProducts,
     
 }

@@ -1,4 +1,5 @@
 const Category = require("../models/CategoryModel");
+const Product = require("../models/ProductModel");
 
 const createCategory = (newCategory) =>{
     return new Promise(async (resolve , reject) => {
@@ -68,50 +69,63 @@ const updateCategory = (id , data) =>{
     })
 }
 
-const deleteCategory = (id) =>{
-    return new Promise(async (resolve , reject) => {
-        
+const deleteCategory = (id) => {
+    return new Promise(async (resolve, reject) => {
         try {
             const checkCategory = await Category.findOne({
                 _id: id,
             })
-            // console.log('checkProduct', checkProduct);
             
             if(checkCategory === null) {
                 resolve({
-                    status: 'ERR' ,
+                    status: 'ERR',
                     message: 'Category không có trong database'
                 })
             }
+
+            // Kiểm tra xem có sản phẩm nào trong danh mục kh��ng
+            const productsInCategory = await Product.countDocuments({ category: id })
+            if (productsInCategory > 0) {
+                resolve({
+                    status: 'ERR',
+                    message: `Không thể xóa danh mục này vì còn ${productsInCategory} sản phẩm`
+                })
+                return
+            }
+
             await Category.findByIdAndDelete(id)
             resolve({
-                status: 'OK' ,
+                status: 'OK',
                 message: 'delete Category thành công!',
-                
             })
-           
-            
-           
-        }catch(e) {
+        } catch(e) {
             reject(e)
         }
     })
 }
 
-const getAllCategory = () =>{
-    return new Promise(async (resolve , reject) => {
-        
+const getAllCategory = () => {
+    return new Promise(async (resolve, reject) => {
         try {
             const allCategory = await Category.find()
-            resolve({
-                status: 'OK' ,
-                message: 'Lấy thông tin tất cả Category thành công!',
-                data: allCategory
-            })
-           
             
-           
-        }catch(e) {
+            // Lấy số lượng sản phẩm cho mỗi danh mục
+            const categoriesWithCount = await Promise.all(
+                allCategory.map(async (category) => {
+                    const productCount = await Product.countDocuments({ category: category._id })
+                    return {
+                        ...category._doc,
+                        productCount
+                    }
+                })
+            )
+
+            resolve({
+                status: 'OK',
+                message: 'Lấy thông tin tất cả Category thành công!',
+                data: categoriesWithCount
+            })
+        } catch(e) {
             reject(e)
         }
     })

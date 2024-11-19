@@ -242,6 +242,56 @@ const getBrandWithProducts= async (req, res) => {
         });
     }
 }
+const searchProducts = async (req, res) => {
+    try {
+        const { 
+            limit = 12, 
+            page = 0, 
+            categories, 
+            brands, 
+            minPrice, 
+            maxPrice, 
+            keyword,
+            sort 
+        } = req.query;
+
+        // Xử lý và validate các tham số tìm kiếm
+        const searchParams = {
+            categories: categories ? categories.split(',') : undefined,
+            brands: brands ? brands.split(',') : undefined,
+            priceRange: {
+                minPrice: minPrice ? Number(minPrice) : undefined,
+                maxPrice: maxPrice ? Number(maxPrice) : undefined
+            },
+            keyword: keyword,
+            sort: sort
+        };
+
+        // Validate giá
+        if (searchParams.priceRange.minPrice && searchParams.priceRange.maxPrice) {
+            if (searchParams.priceRange.minPrice > searchParams.priceRange.maxPrice) {
+                return res.status(400).json({
+                    status: "ERR",
+                    message: 'Giá tối thiểu không được lớn hơn giá tối đa'
+                });
+            }
+        }
+
+        // Gọi service search
+        const response = await ProductService.searchProducts(
+            Number(limit),
+            Number(page),
+            searchParams
+        );
+
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(500).json({
+            status: "ERR",
+            message: error.message
+        });
+    }
+};
 
 
 module.exports = {
@@ -257,6 +307,7 @@ module.exports = {
     getProductsByCategory,
     getAllBrandProduct,
     getProductsByBrand,
-    getBrandWithProducts
+    getBrandWithProducts,
+    searchProducts
    
 }

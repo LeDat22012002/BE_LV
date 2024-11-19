@@ -19,5 +19,6 @@ router.get('/brand/:brandId', productController.getProductsByBrand);
 // Lấy tất cả category kèm sản phẩm mẫu
 router.get('/categories-with-products', productController.getCategoryWithProducts);
 router.get('/brands-with-products', productController.getBrandWithProducts);
+router.get('/search', productController.searchProducts);
 
 module.exports = router
