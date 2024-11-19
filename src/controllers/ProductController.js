@@ -106,13 +106,17 @@ const deleteManyProduct = async (req , res) => {
     }
 }
 
-const getAllProduct = async (req , res) => {
-    // console.log('tttt' , req.query)
+const getAllProduct = async (req, res) => {
     try {
-        const {limit , page , sort , filter}  = req.query
-        const response = await ProductService.getAllProduct(Number(limit) || null , Number(page) || 0 , sort , filter)
+        const { limit, page, sort, filter } = req.query
+        const response = await ProductService.getAllProduct(
+            Number(limit) || null, // Default sản phẩm mỗi trang
+            Number(page) || 0,
+            sort ? [sort] : null, // Chuyển sort thành array
+            filter
+        )
         return res.status(200).json(response)
-    }catch(e) {
+    } catch (e) {
         return res.status(404).json({
             message: e
         })
@@ -145,6 +149,100 @@ const getAllCategoryProduct = async (req , res) => {
     }
 }
 
+// Thêm các controllers mới cho category
+ const getProductsByCategory= async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const { limit = 12, page = 0, sort } = req.query;
+
+        if (!categoryId) {
+            return res.status(400).json({
+                status: "ERR",
+                message: 'Thiếu ID danh mục'
+            });
+        }
+
+        const response = await ProductService.getProductsByCategory(
+            categoryId,
+            Number(limit),
+            Number(page),
+            sort ? [sort] : null
+        );
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(500).json({
+            status: "ERR",
+            message: error.message
+        });
+    }
+}
+
+const getCategoryWithProducts= async (req, res) => {
+    try {
+        const { limit = 4 } = req.query;
+        const response = await ProductService.getCategoryWithProducts(Number(limit));
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(500).json({
+            status: "ERR",
+            message: error.message
+        });
+    }
+}
+
+const getAllBrandProduct = async (req , res) => {
+    // console.log('tttt' , req.query)
+    try {
+       
+        const response = await ProductService.getAllBrandProduct()
+        return res.status(200).json(response)
+    }catch(e) {
+        return res.status(404).json({
+            message: e
+        })
+    }
+}
+
+const getProductsByBrand= async (req, res) => {
+    try {
+        const { brandId } = req.params;
+        const { limit = 12, page = 0, sort } = req.query;
+
+        if (!brandId) {
+            return res.status(400).json({
+                status: "ERR",
+                message: 'Thiếu ID thương hiệu'
+            });
+        }
+
+        const response = await ProductService.getProductsByBrand(
+            brandId,
+            Number(limit),
+            Number(page),
+            sort ? [sort] : null
+        );
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(500).json({
+            status: "ERR",
+            message: error.message
+        });
+    }
+}
+
+const getBrandWithProducts= async (req, res) => {
+    try {
+        const { limit = 4 } = req.query;
+        const response = await ProductService.getBrandWithProducts(Number(limit));
+        return res.status(200).json(response);
+    } catch (error) {
+        return res.status(500).json({
+            status: "ERR",
+            message: error.message
+        });
+    }
+}
+
 
 module.exports = {
     createProduct,
@@ -154,6 +252,11 @@ module.exports = {
     getAllProduct,
     deleteManyProduct,
     getAllTypeProduct,
-    getAllCategoryProduct
+    getAllCategoryProduct,
+    getCategoryWithProducts,
+    getProductsByCategory,
+    getAllBrandProduct,
+    getProductsByBrand,
+    getBrandWithProducts
    
 }

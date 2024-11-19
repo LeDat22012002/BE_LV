@@ -26,6 +26,7 @@ const cookieParser = require("cookie-parser");
  .catch((err)=> {
    console.log(err)
  })
+ 
  app.listen(port , () =>{
     console.log('Sever is running in port:' , + port)
  })

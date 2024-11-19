@@ -169,72 +169,66 @@ const deleteManyProduct = (ids) =>{
     })
 }
 
-const getAllProduct = (limit  , page , sort , filter) =>{
-    // console.log(sort)
-    return new Promise(async (resolve , reject) => {
-        
+const getAllProduct = (limit, page, sort, filter) => {
+    return new Promise(async (resolve, reject) => {
         try {
-            const totalProduct = await Product.countDocuments()
-            let allProduct= []
-            // console.log(filter)
-            if(filter) {
-                const lable = filter[0]
-                const allObjectFilter = await Product.find({
-                    [lable]: {'$regex' : new RegExp(filter[1],"i")}
-                }).limit(limit).skip(page * limit)
+            let query = {};
+            let sortOption = { createdAt: -1 }; // Mặc định sort theo ngày mới nhất
 
-                
+            // Xử lý filter
+            if (filter) {
+                const [field, value] = filter;
+                query = {
+                    [field]: { '$regex': new RegExp(value, "i") }
+                }
+            }
 
-                resolve({
-                    status: 'OK' ,
-                    message: 'Lấy thông tin tất cả Product thành công!',
-                    data: allObjectFilter,
-                    total: totalProduct, // tổng số sản phẩm 
-                    pageCurrent: Number(page + 1) , // mỗi lần click page tăng lên 1 
-                    totalPage: Math.ceil(totalProduct / limit) // Tổng số page
-                })
+            // Xử lý sort
+            if (sort) {
+                const [sortType] = sort; // Lấy type sort từ params
+                switch (sortType) {
+                    case 'newest':
+                        sortOption = { createdAt: -1 }; // Mới nhất đến cũ nhất
+                        break;
+                    case 'asc':
+                        sortOption = { price: 1 }; // Giá tăng dần
+                        break;
+                    case 'desc':
+                        sortOption = { price: -1 }; // Giá giảm dần
+                        break;
+                    case 'selle':
+                        sortOption = { selled: -1 };//Bán chạy nhất
+                        break;   
+                    default:
+                        sortOption = { createdAt: -1 }; // Mặc định mới nhất
+                }
             }
-            if(sort){
-                // console.log('OKKKK')
-                const objectSort = {}
-                objectSort[sort[1]] = sort[0]
-                // console.log('objectSort' , objectSort)
 
-                const allProductSort = await Product.find().limit(limit).skip(page * limit).populate("category")
-                resolve({
-                    status: 'OK' ,
-                    message: 'Lấy thông tin tất cả Product thành công!',
-                    data: allProductSort,
-                    total: totalProduct, // tổng số sản phẩm 
-                    pageCurrent: Number(page + 1) , // mỗi lần click page tăng lên 1 
-                    totalPage: Math.ceil(totalProduct / limit) // Tổng số page
-                })
-            }
-            // limit() lấy số lượng product mặc định mà bạn mong muốn 
-            // skip() bỏ qua số product đầu tiên bạn muốn
-            // skip(page * limit) mỗi lần nhấn chuyển trang thằng page sẽ tăng lên vs giá trị tương ứng
-            if(!limit){
-                allProduct = await Product.find().populate("category") 
-            }else{
-                allProduct = await Product.find().limit(limit).skip(page * limit).sort().populate("category") 
-            }
-           
+            // Query database
+            const [products, totalProduct] = await Promise.all([
+                Product.find(query)
+                    .sort(sortOption)
+                    .populate("category")
+                    .populate("brand")
+                    .limit(limit)
+                    .skip(page * limit),
+                Product.countDocuments(query)
+            ]);
+
             resolve({
-                status: 'OK' ,
+                status: 'OK',
                 message: 'Lấy thông tin tất cả Product thành công!',
-                data: allProduct,
-                total: totalProduct, // tổng số sản phẩm 
-                pageCurrent: Number(page + 1) , // mỗi lần click page tăng lên 1 
-                totalPage: Math.ceil(totalProduct / limit) // Tổng số page
-            })
-           
-            
-           
-        }catch(e) {
-            reject(e)
+                data: products,
+                total: totalProduct,
+                pageCurrent: Number(page + 1),
+                totalPage: Math.ceil(totalProduct / limit)
+            });
+
+        } catch (e) {
+            reject(e);
         }
-    })
-}
+    });
+};
 
 const getAllTypeProduct = () =>{
     // console.log(sort)
@@ -259,28 +253,227 @@ const getAllTypeProduct = () =>{
     })
 }
 
-const getAllCategoryProduct = () =>{
-    // console.log(sort)
-    return new Promise(async (resolve , reject) => {
-        
+
+const getProductsByCategory = (categoryId, limit, page, sort) => {
+    return new Promise(async (resolve, reject) => {
         try {
-            
-           
-            const allCategoryProduct = await Product.distinct('category').populate('category')
+            let query = { category: categoryId };
+            let sortOption = { createdAt: -1 }; // Mặc định sort theo ngày mới nhất
+
+            // Xử lý sort nếu có
+            if (sort) {
+                const [sortType] = sort;
+                switch (sortType) {
+                    case 'newest':
+                        sortOption = { createdAt: -1 };
+                        break;
+                    case 'asc':
+                        sortOption = { price: 1 };
+                        break;
+                    case 'desc':
+                        sortOption = { price: -1 };
+                        break;
+                    case 'selle':
+                        sortOption = { selled: -1 };
+                        break;    
+                    default:
+                        sortOption = { createdAt: -1 };
+                }
+            }
+
+            // Query database với Promise.all để tối ưu performance
+            const [products, totalProduct] = await Promise.all([
+                Product.find(query)
+                    .sort(sortOption)
+                    .populate("category")
+                    .populate("brand")
+                    .limit(limit)
+                    .skip(page * limit),
+                Product.countDocuments(query)
+            ]);
+
+            // Check nếu không có sản phẩm nào
+            if (products.length === 0) {
+                resolve({
+                    status: 'OK',
+                    message: 'Không có sản phẩm nào trong danh mục này',
+                    data: [],
+                    total: 0,
+                    pageCurrent: 1,
+                    totalPage: 0
+                });
+                return;
+            }
+
             resolve({
-                status: 'OK' ,
-                message: 'Lấy thông tin tất cả Category Product thành công!',
-                data: allCategoryProduct,
-                
-            })
-           
-            
-           
-        }catch(e) {
-            reject(e)
+                status: 'OK',
+                message: 'Lấy thông tin sản phẩm theo danh mục thành công',
+                data: products,
+                total: totalProduct,
+                pageCurrent: Number(page + 1),
+                totalPage: Math.ceil(totalProduct / limit)
+            });
+
+        } catch (error) {
+            reject(error);
         }
-    })
-}
+    });
+};
+
+const getAllCategoryProduct = () => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Lấy tất cả category có sản phẩm
+            const categories = await Product.aggregate([
+                {
+                    $group: {
+                        _id: "$category",
+                        count: { $sum: 1 },
+                        products: { $push: "$$ROOT" }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "categories", // Collection name của category
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "categoryInfo"
+                    }
+                },
+                {
+                    $project: {
+                        categoryId: "$_id",
+                        categoryName: { $arrayElemAt: ["$categoryInfo.name", 0] },
+                        productCount: "$count",
+                        products: { $slice: ["$products", 4] } // Lấy 4 sản phẩm mới nhất
+                    }
+                }
+            ]);
+
+            resolve({
+                status: 'OK',
+                message: 'Lấy thông tin danh mục và sản phẩm thành công',
+                data: categories
+            });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+const getProductsByBrand = (brandId, limit, page, sort) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let query = { brand: brandId };
+            let sortOption = { createdAt: -1 }; // Mặc định sort theo ngày mới nhất
+
+            // Xử lý sort nếu có
+            if (sort) {
+                const [sortType] = sort;
+                switch (sortType) {
+                    case 'newest':
+                        sortOption = { createdAt: -1 };
+                        break;
+                    case 'asc':
+                        sortOption = { price: 1 };
+                        break;
+                    case 'desc':
+                        sortOption = { price: -1 };
+                        break;
+                    case 'selle':
+                        sortOption = { selled: -1 };
+                        break;    
+                    default:
+                        sortOption = { createdAt: -1 };
+                }
+            }
+
+            // Query database với Promise.all để tối ưu performance
+            const [products, totalProduct] = await Promise.all([
+                Product.find(query)
+                    .sort(sortOption)
+                    .populate("category")
+                    .populate("brand")
+                    .limit(limit)
+                    .skip(page * limit),
+                Product.countDocuments(query)
+            ]);
+
+            // Check nếu không có sản phẩm nào
+            if (products.length === 0) {
+                resolve({
+                    status: 'OK',
+                    message: 'Không có sản phẩm nào trong thương hiệu này',
+                    data: [],
+                    total: 0,
+                    pageCurrent: 1,
+                    totalPage: 0
+                });
+                return;
+            }
+
+            resolve({
+                status: 'OK',
+                message: 'Lấy thông tin sản phẩm theo thương hiệu thành công',
+                data: products,
+                total: totalProduct,
+                pageCurrent: Number(page + 1),
+                totalPage: Math.ceil(totalProduct / limit)
+            });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+const getAllBrandProduct = () => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Lấy tất cả category có sản phẩm
+            const brands = await Product.aggregate([
+                {
+                    $group: {
+                        _id: "$brand",
+                        count: { $sum: 1 },
+                        products: { $push: "$$ROOT" }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "brands", // Collection name của category
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "brandInfo"
+                    }
+                },
+                {
+                    $project: {
+                        brandId: "$_id",
+                        brandName: { $arrayElemAt: ["$brandInfo.name", 0] },
+                        productCount: "$count",
+                        products: { $slice: ["$products", 4] } // Lấy 4 sản phẩm mới nhất
+                    }
+                }
+            ]);
+
+            resolve({
+                status: 'OK',
+                message: 'Lấy thông tin thương hiệu và sản phẩm thành công',
+                data: brands
+            });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+
+
+
+
 
 module.exports = {
     createProduct, 
@@ -290,7 +483,11 @@ module.exports = {
     getAllProduct ,
     deleteManyProduct,
     getAllTypeProduct,
-    getAllCategoryProduct
-    
+    getAllCategoryProduct,
+    getProductsByCategory,
+    getAllCategoryProduct,
+    getProductsByBrand,
+    getAllBrandProduct,
+
     
 }
