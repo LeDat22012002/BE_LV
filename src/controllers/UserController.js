@@ -1,4 +1,3 @@
-
 const UserService = require('../services/UserServices')
 const JwtService = require('../services/JwtServices')
 
@@ -211,6 +210,29 @@ const logoutUser = async (req , res) => {
     }
 }
 
+const updateUserActive = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        if (!userId) {
+            return res.status(200).json({
+                status: 'ERR',
+                message: 'UserId is required'
+            });
+        }
+
+        const response = await UserService.updateUserActive(userId);
+        return res.status(200).json(response);
+
+    } catch (error) {
+        return res.status(500).json({
+            status: 'ERR',
+            message: 'Error updating user active status',
+            error: error.message
+        });
+    }
+};
+
 
 
 module.exports = {
@@ -222,5 +244,6 @@ module.exports = {
     getDetailsUser,
     refreshToken,
     logoutUser,
-    deleteManyUser
+    deleteManyUser,
+    updateUserActive
 }

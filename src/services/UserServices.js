@@ -174,26 +174,22 @@ const deleteManyUser = (ids) =>{
 }
 
 
-const getAllUser = () =>{
-    return new Promise(async (resolve , reject) => {
-        
+const getAllUser = () => {
+    return new Promise(async (resolve, reject) => {
         try {
-           
+            // Thêm điều kiện isAdmin: false vào query
+            const allUser = await User.find({ isAdmin: false });
             
-            const allUser = await User.find()
             resolve({
-                status: 'OK' ,
-                message: 'Lấy thông tin tất cả user thành công!',
+                status: 'OK',
+                message: 'Lấy danh sách người dùng thành công!',
                 data: allUser
-            })
-           
-            
-           
-        }catch(e) {
-            reject(e)
+            });
+        } catch (e) {
+            reject(e);
         }
-    })
-}
+    });
+};
 
 const getDetailsUser = (id) =>{
     return new Promise(async (resolve , reject) => {
@@ -223,7 +219,39 @@ const getDetailsUser = (id) =>{
             reject(e)
         }
     })
+    
 }
+const updateUserActive = async (id) => {
+    try {
+        const checkUser = await User.findById(id);
+        if (!checkUser) {
+            return {
+                status: 'ERR',
+                message: 'The user is not defined'
+            };
+        }
+
+        // Toggle trạng thái isActive
+        const newActiveStatus = !checkUser.isActive;
+        
+        const updatedUser = await User.findByIdAndUpdate(
+            id, 
+            { isActive: newActiveStatus }, 
+            { new: true }
+        );
+
+        return {
+            status: 'OK',
+            message: `User has been ${newActiveStatus ? 'activated' : 'deactivated'} successfully`,
+            data: updatedUser
+        };
+    } catch (error) {
+        return {
+            status: 'ERR',
+            message: error.message || 'Error updating user status'
+        };
+    }
+};
 
 
 
@@ -234,6 +262,6 @@ module.exports = {
     deleteUser,
     getAllUser,
     getDetailsUser,
-    deleteManyUser
-    
+    deleteManyUser,
+    updateUserActive
 }
