@@ -168,59 +168,65 @@ const deleteManyProduct = (ids) =>{
     })
 }
 
-const getAllProduct = (limit, page, sort, filter) => {
+const getAllProduct = (limit = 10, page = 0, sort) => {
     return new Promise(async (resolve, reject) => {
         try {
+            const validLimit = Math.max(1, parseInt(limit));
+            const validPage = Math.max(0, parseInt(page));
+            
             let query = {};
             let sortOption = { createdAt: -1 }; // Mặc định sort theo ngày mới nhất
 
-            // Xử lý filter
-            if (filter) {
-                const [field, value] = filter;
-                query = {
-                    [field]: { '$regex': new RegExp(value, "i") }
-                }
-            }
-
             // Xử lý sort
             if (sort) {
-                const [sortType] = sort; // Lấy type sort từ params
-                switch (sortType) {
+                switch (sort) {
                     case 'newest':
-                        sortOption = { createdAt: -1 }; // Mới nhất đến cũ nhất
+                        sortOption = { createdAt: -1 };
                         break;
                     case 'asc':
-                        sortOption = { price: 1 }; // Giá tăng dần
+                        sortOption = { price: 1 };
                         break;
                     case 'desc':
-                        sortOption = { price: -1 }; // Giá giảm dần
+                        sortOption = { price: -1 };
                         break;
                     case 'selle':
-                        sortOption = { selled: -1 };//Bán chạy nhất
-                        break;   
+                        sortOption = { selled: -1 };
+                        break;    
                     default:
-                        sortOption = { createdAt: -1 }; // Mặc định mới nhất
+                        sortOption = { createdAt: -1 };
                 }
             }
 
-            // Query database
+            // Query database với pagination metadata
             const [products, totalProduct] = await Promise.all([
                 Product.find(query)
                     .sort(sortOption)
                     .populate("category")
                     .populate("brand")
-                    .limit(limit)
-                    .skip(page * limit),
+                    .limit(validLimit)
+                    .skip(validPage * validLimit),
                 Product.countDocuments(query)
             ]);
+
+            // Tính toán thông tin phân trang
+            const totalPages = Math.ceil(totalProduct / validLimit);
+            const hasNextPage = validPage + 1 < totalPages;
+            const hasPrevPage = validPage > 0;
 
             resolve({
                 status: 'OK',
                 message: 'Lấy thông tin tất cả Product thành công!',
                 data: products,
-                total: totalProduct,
-                pageCurrent: Number(page + 1),
-                totalPage: Math.ceil(totalProduct / limit)
+                pagination: {
+                    total: totalProduct,
+                    currentPage: validPage + 1,
+                    totalPages,
+                    limit: validLimit,
+                    hasNextPage,
+                    hasPrevPage,
+                    nextPage: hasNextPage ? validPage + 2 : null,
+                    prevPage: hasPrevPage ? validPage : null
+                }
             });
 
         } catch (e) {

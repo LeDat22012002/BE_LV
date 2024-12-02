@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-const oderSchema = new mongoose.Schema(
+const orderSchema = new mongoose.Schema(
     {
         orderItems: [
             {
@@ -32,13 +32,27 @@ const oderSchema = new mongoose.Schema(
         paidAt: { type: Date },
         isDelivered: { type: Boolean , default: false },
         deliveredAt: { type: Date},
+        status: { 
+            type: String, 
+            enum: [
+                'PENDING',       // Chờ xác nhận
+                'CONFIRMED',     // Đã xác nhận
+                'SHIPPING',      // Đang giao hàng
+                'COMPLETED',     // Hoàn thành
+                'CANCELLED'      // Đã hủy
+            ],
+            default: 'PENDING'
+        },
+        statusHistory: [{
+            status: String,
+            updatedAt: Date,
+            note: String
+        }],
     },
-        {
-            timestamps: true,
-        }
-   
-    
+    {
+        timestamps: true,
+    }
 );
 
-const Order = mongoose.model('Order' , oderSchema);
+const Order = mongoose.model('Order' , orderSchema);
 module.exports = Order;

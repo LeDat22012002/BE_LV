@@ -1,6 +1,4 @@
-
 const OrderService = require('../services/OrderServices')
-
 
 const createOrder = async (req , res) => {
     
@@ -79,14 +77,62 @@ const getAllOrder= async (req , res) => {
     }
 }
 
+const updateOrderStatus = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const data = req.body;
 
+        if (!orderId) {
+            return res.status(200).json({
+                status: "ERR",
+                message: 'OrderId không tồn tại'
+            })
+        }
 
+        const response = await OrderService.updateOrderStatus(orderId, data)
+        return res.status(200).json(response)
+    } catch(e) {
+        return res.status(404).json({
+            message: e
+        })
+    }
+}
+
+const cancelOrder = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const { userId } = req.body;
+
+        console.log('Debug info:', {
+            orderId,
+            userId,
+            body: req.body,
+            headers: req.headers
+        });
+
+        if (!orderId || !userId) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: `Thiếu thông tin người dùng hoặc đơn hàng, userId: ${userId}, orderId: ${orderId}`
+            });
+        }
+        
+        const response = await OrderService.cancelOrder(orderId, userId);
+        return res.status(200).json(response);
+    } catch (error) {
+        console.error('Cancel order error:', error);
+        return res.status(500).json({
+            status: 'ERR',
+            message: error.message || 'Lỗi server khi hủy đơn hàng'
+        });
+    }
+};
 
 module.exports = {
     createOrder,
     getOrderDetails,
     getDetails_Order,
-    getAllOrder
-   
-   
+    getAllOrder,
+    updateOrderStatus,
+    cancelOrder
 }
