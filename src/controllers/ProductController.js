@@ -6,10 +6,10 @@ const createProduct = async (req , res) => {
     try {
        
         // Lấy ra những trường mà mình tạo ra cho Product
-        const { name , image , type, price , countInStock , rating , description ,discount ,category ,brand} = req.body 
+        const { name , image , type, price , countInStock  , description  ,category ,brand} = req.body 
         // console.log(req.body)
         // Kiểm tra tụi nó có tồn tại không
-        if( !name || !image || !type|| !price || !countInStock || !rating || !discount ||!category  ){
+        if( !name || !image || !type|| !price || !countInStock  ||!category  ){
             return res.status(200).json({
                 status: "ERR",
                 message: 'Một trong số các trường không tồn tại'

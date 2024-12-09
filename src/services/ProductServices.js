@@ -1,12 +1,13 @@
 // const Category = require("../models/CategoryModel");
 const Product = require("../models/ProductModel");
+const Order = require("../models/OderProduct");
 
 
 
 const createProduct = (newProduct) =>{
     return new Promise(async (resolve , reject) => {
         
-        const { name , image , type, price , countInStock , rating , description ,discount,  category , brand } = newProduct
+        const { name , image , type, price , countInStock , description ,  category , brand } = newProduct
         try {
             // const category = await Category.findById(categoryId)
             // if (!category) {
@@ -34,9 +35,9 @@ const createProduct = (newProduct) =>{
                 type, 
                 price, 
                 countInStock: Number(countInStock), 
-                rating, 
+                
                 description,
-                discount: Number(discount),
+                
                 category,
                 brand,
                 
@@ -118,55 +119,76 @@ const getDetailsProduct = (id) =>{
     })
 }
 
-const deleteProduct = (id) =>{
-    return new Promise(async (resolve , reject) => {
-        
+const deleteProduct = (id) => {
+    return new Promise(async (resolve, reject) => {
         try {
+            // Kiểm tra sản phẩm tồn tại
             const checkProduct = await Product.findOne({
                 _id: id,
-            })
-            // console.log('checkProduct', checkProduct);
+            });
             
             if(checkProduct === null) {
                 resolve({
-                    status: 'ERR' ,
-                    message: 'Product không có trong database'
-                })
+                    status: 'ERR',
+                    message: 'Sản phẩm không tồn tại trong hệ thống'
+                });
+                return;
             }
-            await Product.findByIdAndDelete(id)
-            resolve({
-                status: 'OK' ,
-                message: 'delete Product thành công!',
-                
-            })
-           
-            
-           
-        }catch(e) {
-            reject(e)
-        }
-    })
-}
 
-const deleteManyProduct = (ids) =>{
-    return new Promise(async (resolve , reject) => {
-        
-        try {
-            
-            await Product.deleteMany({_id : ids})
+            // Kiểm tra sản phẩm trong đơn hàng
+            const orderWithProduct = await Order.findOne({
+                'orderItems.product': id
+            });
+
+            if(orderWithProduct) {
+                resolve({
+                    status: 'ERR',
+                    message: 'Không thể xóa sản phẩm đã có trong đơn hàng'
+                });
+                return;
+            }
+
+            // Nếu không có trong đơn hàng thì xóa
+            await Product.findByIdAndDelete(id);
             resolve({
-                status: 'OK' ,
-                message: 'delete Product thành công!',
-                
-            })
-           
-            
-           
-        }catch(e) {
-            reject(e)
+                status: 'OK',
+                message: 'Xóa sản phẩm thành công'
+            });
+
+        } catch(e) {
+            reject(e);
         }
-    })
-}
+    });
+};
+
+const deleteManyProduct = (ids) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Kiểm tra các sản phẩm trong đơn hàng
+            const orderWithProducts = await Order.findOne({
+                'orderItems.product': { $in: ids }
+            });
+
+            if(orderWithProducts) {
+                resolve({
+                    status: 'ERR',
+                    message: 'Không thể xóa sản phẩm đã có trong đơn hàng'
+                });
+                return;
+            }
+
+            // Nếu không có trong đơn hàng thì xóa
+            await Product.deleteMany({ _id: ids });
+            resolve({
+                status: 'OK',
+                message: 'Xóa sản phẩm thành công'
+            });
+
+        } catch(e) {
+            reject(e);
+        }
+    });
+};
 
 const getAllProduct = (limit = 10, page = 0, sort) => {
     return new Promise(async (resolve, reject) => {
